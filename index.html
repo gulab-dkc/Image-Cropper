@@ -87,12 +87,12 @@
       
 function updateSkippedImagesStorage() {
   const skippedData = croppedImages
-    .filter(img => skippedImageNames.has(img.name))
+    .filter(img => skippedImageNames.has(img.originalName))
     .map(async (img) => {
       const base64 = await blobToBase64(img.blob);
       return {
         id: img.id,
-        name: img.name,
+        name: img.originalName,
         base64: base64
       };
     });
@@ -310,11 +310,12 @@ checkbox.addEventListener("change", function () {
   }
   updateSkippedImagesStorage();
 });
-                      croppedImages.push({
-                        id: uniqueId,
-                        name: `${baseName}.jpg`,
-                        blob,
-                      });
+                     croppedImages.push({
+                      id: uniqueId,
+                      name: `${baseName}.jpg`,
+                      originalName: file.name,
+                      blob,
+                    });
                       cardList.push({ index, card });
                       processed++;
                       updateProgress(processed, totalFiles);

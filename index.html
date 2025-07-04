@@ -87,13 +87,13 @@
       
 function updateSkippedImagesStorage() {
   const skippedData = croppedImages
-    .filter(img => skippedImageNames.has(img.originalName))
+  .filter(img => skippedImageNames.has(img.originalName))
     .map(async (img) => {
       const base64 = await blobToBase64(img.blob);
       return {
         id: img.id,
-        name: img.originalName,
-        base64: base64
+        name: img.name,
+        // base64: base64
       };
     });
 
@@ -429,50 +429,36 @@ checkbox.addEventListener("change", function () {
 
   const skippedData = JSON.parse(saved);
   if (skippedData.length) {
-    skippedData.forEach((item, index) => {
+    const skippedBox = document.createElement("div");
+    skippedBox.style.background = "#fff7e6";
+    skippedBox.style.border = "1px solid #f0c36d";
+    skippedBox.style.padding = "10px";
+    skippedBox.style.marginBottom = "15px";
+    skippedBox.style.borderRadius = "6px";
+
+    const title = document.createElement("h4");
+    title.textContent = "🗂️ Previously Skipped Images:";
+    title.style.marginTop = "0";
+
+    const list = document.createElement("ul");
+    list.style.margin = "0";
+    list.style.paddingLeft = "20px";
+
+    skippedData.forEach((item) => {
       skippedImageNames.add(item.name);
-      const card = document.createElement("div");
-      card.className = "card1";
-      card.dataset.id = item.id;
 
-      const img = new Image();
-      img.src = item.base64;
-
-      img.onload = () => {
-        const width = img.width;
-        const height = img.height;
-        const aspect = (width / height).toFixed(2);
-
-        card.innerHTML = `
-          <h4>Skipped (Previously): ${item.name}</h4>
-          <div class="pair">
-            <div class="image-wrapper">
-              <img src="${item.base64}" />
-              <p><strong>Cropped</strong><br>Width: ${width}, Height: ${height}, Aspect: ${aspect}</p>
-            </div>
-          </div>
-          <label style="display:block; margin-top:6px;">
-            <input type="checkbox" class="exclude-checkbox skip-checkbox" data-id="${item.id}" data-name="${item.name}" checked>
-            ❌ Exclude from download
-          </label>
-        `;
-
-        const checkbox = card.querySelector(".skip-checkbox");
-        checkbox.addEventListener("change", function () {
-          if (this.checked) {
-            skippedImageNames.add(this.dataset.name);
-          } else {
-            skippedImageNames.delete(this.dataset.name);
-          }
-          updateSkippedImagesStorage();
-        });
-
-        gallery.appendChild(card);
-        downloadAllBtn.disabled = false;
-      };
+      const li = document.createElement("li");
+      li.textContent = `${item.name}`;
+      list.appendChild(li);
     });
+
+    skippedBox.appendChild(title);
+    skippedBox.appendChild(list);
+    gallery.parentNode.insertBefore(skippedBox, gallery);
+    downloadAllBtn.disabled = false;
   }
 });
+
 
 
 

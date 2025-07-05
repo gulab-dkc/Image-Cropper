@@ -11,11 +11,13 @@
     <script src="https://unpkg.com/utif@3.0.0/UTIF.js"></script>
   </head>
   <body>
-    <h2 style="color: red;">All Data Lost After Refreshing the Browser</h2>
+    <h2 style="color: red">All Data Lost After Refreshing the Browser</h2>
 
     <h2>📐 Image Crop (0.67 Aspect Ratio) & TIFF Convert</h2>
-   <p style="color: red;">Images are automatically cropped after upload. There is also a functionality to recrop images after upload.</p>
-
+    <p style="color: red">
+      Images are automatically cropped after upload. There is also a
+      functionality to recrop images after upload.
+    </p>
 
     <div id="drop-area">
       📥 Drag & Drop Images Here or <span class="browse-link">Browse</span>
@@ -27,7 +29,14 @@
       <span id="progress-text">0%</span>
     </div>
 
-    <button id="downloadAll" class="btn" disabled>⬇️ Download All</button>
+    <div
+      style="display: flex; gap: 10px; align-items: center; margin-top: 10px"
+    >
+      <button id="downloadAll" class="btn" disabled>⬇️ Download All</button>
+      <button id="showSkippedBtn" class="btn">🖼️ Show Skipped Images</button>
+    </div>
+    <div id="imageCounts" style="margin-top: 10px; font-weight: bold"></div>
+
     <div class="gallery" id="gallery"></div>
 
     <!-- Manual Crop Modal -->
@@ -83,36 +92,47 @@
       let currentRecropIndex = null;
       let cropper = null;
 
-      let skippedImageNames = new Set(JSON.parse(localStorage.getItem("skippedImages") || "[]"));
-      
-function updateSkippedImagesStorage() {
-  const skippedData = croppedImages
-  .filter(img => skippedImageNames.has(img.originalName))
-    .map(async (img) => {
-      const base64 = await blobToBase64(img.blob);
-      return {
-        id: img.id,
-        name: img.name,
-        // base64: base64
-      };
-    });
+      let skippedImageNames = new Set(
+        JSON.parse(localStorage.getItem("skippedImages") || "[]")
+      );
 
-  Promise.all(skippedData).then((data) => {
-    localStorage.setItem("skippedImages", JSON.stringify(data));
-  });
-}
+      // function updateSkippedImagesStorage() {
+      //   const skippedData = croppedImages
+      //   .filter(img => skippedImageNames.has(img.originalName))
+      //     .map(async (img) => {
+      //       const base64 = await blobToBase64(img.blob);
+      //       return {
+      //         id: img.id,
+      //         name: img.name,
+      //         // base64: base64
+      //       };
+      //     });
 
-function blobToBase64(blob) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
-  });
-}
+      //   Promise.all(skippedData).then((data) => {
+      //     localStorage.setItem("skippedImages", JSON.stringify(data));
+      //   });
+      // }
 
+      function updateSkippedImagesStorage() {
+        // Get only currently skipped image names from the current upload session
+        const currentSkipped = croppedImages
+          .filter((img) => skippedImageNames.has(img.originalName))
+          .map((img) => ({
+            id: img.id,
+            name: img.name,
+          }));
 
+        // Store only this session's skipped image data in localStorage
+        localStorage.setItem("skippedImages", JSON.stringify(currentSkipped));
+      }
 
-
+      function blobToBase64(blob) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      }
       uploadInput.addEventListener("change", () =>
         handleFiles(uploadInput.files)
       );
@@ -161,45 +181,48 @@ function blobToBase64(blob) {
       }
 
       function applyManualCrop() {
-  const canvas = cropper.getCroppedCanvas();
-  canvas.toBlob((blob) => {
-    const itemIndex = croppedImages.findIndex(
-      (img) => img.id === currentRecropIndex
-    );
+        const canvas = cropper.getCroppedCanvas();
+        canvas.toBlob(
+          (blob) => {
+            const itemIndex = croppedImages.findIndex(
+              (img) => img.id === currentRecropIndex
+            );
 
-    if (itemIndex !== -1) {
-      // Update the blob data
-      croppedImages[itemIndex].blob = blob;
-    }
+            if (itemIndex !== -1) {
+              // Update the blob data
+              croppedImages[itemIndex].blob = blob;
+            }
 
-    const card = [...document.querySelectorAll(".card")].find(
-      (c) => c.dataset.id === currentRecropIndex
-    );
+            const card = [...document.querySelectorAll(".card")].find(
+              (c) => c.dataset.id === currentRecropIndex
+            );
 
-    // Update the Cropped image (2nd column)
-    const croppedImg = card?.querySelector(
-      ".pair .image-wrapper:nth-child(2) img"
-    );
-    if (croppedImg) {
-      croppedImg.src = URL.createObjectURL(blob);
-    }
+            // Update the Cropped image (2nd column)
+            const croppedImg = card?.querySelector(
+              ".pair .image-wrapper:nth-child(2) img"
+            );
+            if (croppedImg) {
+              croppedImg.src = URL.createObjectURL(blob);
+            }
 
-    // Optional: also update the info text (dimensions)
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-    const infoParagraph = card?.querySelector(
-      ".pair .image-wrapper:nth-child(2) p"
-    );
-    if (infoParagraph) {
-      const aspect = (canvasWidth / canvasHeight).toFixed(2);
-      infoParagraph.innerHTML = `<strong>Cropped</strong><br>Width: ${canvasWidth}, Height: ${canvasHeight}, Aspect: ${aspect}`;
-    }
+            // Optional: also update the info text (dimensions)
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const infoParagraph = card?.querySelector(
+              ".pair .image-wrapper:nth-child(2) p"
+            );
+            if (infoParagraph) {
+              const aspect = (canvasWidth / canvasHeight).toFixed(2);
+              infoParagraph.innerHTML = `<strong>Cropped</strong><br>Width: ${canvasWidth}, Height: ${canvasHeight}, Aspect: ${aspect}`;
+            }
 
-    alert("✅ Manual crop applied!");
-    closeCropModal();
-  }, "image/jpeg", 0.95);
-}
-
+            alert("✅ Manual crop applied!");
+            closeCropModal();
+          },
+          "image/jpeg",
+          0.95
+        );
+      }
 
       function closeCropModal() {
         cropModal.style.display = "none";
@@ -210,15 +233,29 @@ function blobToBase64(blob) {
       async function handleFiles(files) {
         gallery.innerHTML = "";
         croppedImages = [];
+        skippedImageNames.clear();
         downloadAllBtn.disabled = true;
 
         // Validate files: only allow images
-  const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/tiff'];
-  const invalidFiles = Array.from(files).filter(file => !validImageTypes.includes(file.type));
-  if (invalidFiles.length > 0) {
-    alert(`❌ Invalid file(s) detected:\n\n${invalidFiles.map(f => f.name).join('\n')}\n\nOnly image files (JPG, PNG, WEBP, TIFF) are allowed.`);
-    return;
-  }
+        const validImageTypes = [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+          "image/tiff",
+        ];
+        const invalidFiles = Array.from(files).filter(
+          (file) => !validImageTypes.includes(file.type)
+        );
+        if (invalidFiles.length > 0) {
+          alert(
+            `❌ Invalid file(s) detected:\n\n${invalidFiles
+              .map((f) => f.name)
+              .join(
+                "\n"
+              )}\n\nOnly image files (JPG, PNG, WEBP, TIFF) are allowed.`
+          );
+          return;
+        }
 
         const fileArray = Array.from(files).sort((a, b) =>
           a.name
@@ -289,33 +326,46 @@ function blobToBase64(blob) {
                       const url = URL.createObjectURL(blob);
                       const isChecked = skippedImageNames.has(file.name);
                       card.innerHTML += `
-                <div class="pair">
-    ${createImageWithInfo(img.src, width, height, "Original")}
-    ${createImageWithInfo(url, cropWidth, cropHeight, "Cropped")}
-  </div>
-  <label style="display:block; margin-top:6px;">
-    <input type="checkbox" class="exclude-checkbox skip-checkbox" data-id="${uniqueId}" data-name="${file.name}" ${isChecked ? "checked" : ""}>
-    ❌ Exclude from download
-  </label>
-  <button class="btn" onclick="startManualCrop('${img.src}', '${uniqueId}')">✂️ Recrop</button>
-
-
-`;
-const checkbox = card.querySelector(".skip-checkbox");
-checkbox.addEventListener("change", function () {
-  if (this.checked) {
-    skippedImageNames.add(this.dataset.name);
-  } else {
-    skippedImageNames.delete(this.dataset.name);
-  }
-  updateSkippedImagesStorage();
-});
-                     croppedImages.push({
-                      id: uniqueId,
-                      name: `${baseName}.jpg`,
-                      originalName: file.name,
-                      blob,
-                    });
+                      <div class="pair">
+                        ${createImageWithInfo(
+                          img.src,
+                          width,
+                          height,
+                          "Original"
+                        )}
+                        ${createImageWithInfo(
+                          url,
+                          cropWidth,
+                          cropHeight,
+                          "Cropped"
+                        )}
+                        </div>
+                        <label style="display:block; margin-top:6px;">
+                          <input type="checkbox" class="exclude-checkbox skip-checkbox" data-id="${uniqueId}" data-name="${
+                        file.name
+                      }" ${isChecked ? "checked" : ""}>
+                          ❌ Exclude from download
+                        </label>
+                        <button class="btn" onclick="startManualCrop('${
+                          img.src
+                        }', '${uniqueId}')">✂️ Recrop</button>`;
+                      card.querySelector(".exclude-checkbox").dataset.name =
+                        file.name;
+                      const checkbox = card.querySelector(".skip-checkbox");
+                      checkbox.addEventListener("change", function () {
+                        if (this.checked) {
+                          skippedImageNames.add(this.dataset.name);
+                        } else {
+                          skippedImageNames.delete(this.dataset.name);
+                        }
+                        updateSkippedImagesStorage();
+                      });
+                      croppedImages.push({
+                        id: uniqueId,
+                        name: `${baseName}.jpg`,
+                        originalName: file.name,
+                        blob,
+                      });
                       cardList.push({ index, card });
                       processed++;
                       updateProgress(processed, totalFiles);
@@ -366,103 +416,155 @@ checkbox.addEventListener("change", function () {
             });
           downloadAllBtn.disabled = croppedImages.length === 0;
           setTimeout(() => (progressContainer.style.display = "none"), 800);
+          updateImageCounts();
         });
       }
 
       // ... (keep everything the same above this)
 
-  downloadAllBtn.addEventListener("click", async () => {
-    const checkboxes = document.querySelectorAll(
-      ".exclude-checkbox:checked"
-    );
-    const excludedIds = new Set(
-      Array.from(checkboxes).map((cb) => cb.dataset.id)
-    );
-    const includedImages = croppedImages.filter(
-      (img) => !excludedIds.has(img.id)
-    );
-    const skippedImages = croppedImages.filter((img) =>
-      excludedIds.has(img.id)
-    );
-
-    if (!includedImages.length) {
-      alert("⚠️ No images selected for download.");
-      return;
-    }
-
-    console.log("📦 Downloading images:", includedImages);
-    console.log("🚫 Skipped images:", skippedImages);
-
-    if ("showDirectoryPicker" in window) {
-      try {
-        const dirHandle = await window.showDirectoryPicker();
-        for (const img of includedImages) {
-          try {
-            const fileHandle = await dirHandle.getFileHandle(img.name, {
-              create: true,
-            });
-            const writable = await fileHandle.createWritable();
-            await writable.write(img.blob);
-            await writable.close();
-          } catch (writeErr) {
-            console.error(`❌ Failed to write ${img.name}:`, writeErr);
-            alert(`❌ Failed to save file: ${img.name}`);
-          }
-        }
-        alert(
-          `✅ ${includedImages.length} image(s) saved.\n❌ ${skippedImages.length} skipped.`
+      downloadAllBtn.addEventListener("click", async () => {
+        const checkboxes = document.querySelectorAll(
+          ".exclude-checkbox:checked"
         );
-      } catch (pickerErr) {
-        console.error("❌ Folder selection failed:", pickerErr);
-        alert("❌ Folder selection cancelled or not allowed.");
-      }
-    } else {
-      alert(
-        "⚠️ Your browser does not support folder saving.\nUse Chrome or Edge on desktop."
-      );
-    }
-  });
+        const excludedIds = new Set(
+          Array.from(checkboxes).map((cb) => cb.dataset.id)
+        );
+        const includedImages = croppedImages.filter(
+          (img) => !excludedIds.has(img.id)
+        );
+        const skippedImages = croppedImages.filter((img) =>
+          excludedIds.has(img.id)
+        );
 
-  window.addEventListener("DOMContentLoaded", () => {
-  const saved = localStorage.getItem("skippedImages");
-  if (!saved) return;
+        if (!includedImages.length) {
+          alert("⚠️ No images selected for download.");
+          return;
+        }
 
-  const skippedData = JSON.parse(saved);
-  if (skippedData.length) {
-    const skippedBox = document.createElement("div");
-    skippedBox.style.background = "#fff7e6";
-    skippedBox.style.border = "1px solid #f0c36d";
-    skippedBox.style.padding = "10px";
-    skippedBox.style.marginBottom = "15px";
-    skippedBox.style.borderRadius = "6px";
+        console.log("📦 Downloading images:", includedImages);
+        console.log("🚫 Skipped images:", skippedImages);
 
-    const title = document.createElement("h4");
-    title.textContent = "🗂️ Previously Skipped Images:";
-    title.style.marginTop = "0";
+        if ("showDirectoryPicker" in window) {
+          try {
+            const dirHandle = await window.showDirectoryPicker();
+            for (const img of includedImages) {
+              try {
+                const fileHandle = await dirHandle.getFileHandle(img.name, {
+                  create: true,
+                });
+                const writable = await fileHandle.createWritable();
+                await writable.write(img.blob);
+                await writable.close();
+              } catch (writeErr) {
+                console.error(`❌ Failed to write ${img.name}:`, writeErr);
+                alert(`❌ Failed to save file: ${img.name}`);
+              }
+            }
+            alert(
+              `✅ ${includedImages.length} image(s) saved.\n❌ ${skippedImages.length} skipped.`
+            );
+          } catch (pickerErr) {
+            console.error("❌ Folder selection failed:", pickerErr);
+            alert("❌ Folder selection cancelled or not allowed.");
+          }
+        } else {
+          alert(
+            "⚠️ Your browser does not support folder saving.\nUse Chrome or Edge on desktop."
+          );
+        }
+      });
 
-    const list = document.createElement("ul");
-    list.style.margin = "0";
-    list.style.paddingLeft = "20px";
+      document
+        .getElementById("showSkippedBtn")
+        .addEventListener("click", () => {
+          const skippedBoxId = "skippedBox";
+          const saved = localStorage.getItem("skippedImages");
+          const skippedData = saved ? JSON.parse(saved) : [];
 
-    skippedData.forEach((item) => {
-      skippedImageNames.add(item.name);
+          const existingBox = document.getElementById(skippedBoxId);
+          const button = document.getElementById("showSkippedBtn");
 
-      const li = document.createElement("li");
-      li.textContent = `${item.name}`;
-      list.appendChild(li);
-    });
+          if (existingBox) {
+            // If already shown → hide it
+            existingBox.remove();
+            button.textContent = "🖼️ Show Skipped Images";
+            return;
+          }
 
-    skippedBox.appendChild(title);
-    skippedBox.appendChild(list);
-    gallery.parentNode.insertBefore(skippedBox, gallery);
-    downloadAllBtn.disabled = false;
-  }
+          if (!skippedData.length) {
+            alert("⚠️ No previously skipped images found.");
+            return;
+          }
+
+          // Create skipped list box
+const skippedBox = document.createElement("div");
+skippedBox.id = skippedBoxId;
+skippedBox.style.background = "#fff7e6";
+skippedBox.style.border = "1px solid #f0c36d";
+skippedBox.style.padding = "10px";
+skippedBox.style.marginBottom = "15px";
+skippedBox.style.marginTop = "50px";
+skippedBox.style.borderRadius = "6px";
+
+// Title + Count wrapper
+const titleWrapper = document.createElement("div");
+titleWrapper.style.display = "flex";
+titleWrapper.style.justifyContent = "space-between";
+titleWrapper.style.alignItems = "center";
+titleWrapper.style.marginBottom = "6px";
+
+// Title (left)
+const title = document.createElement("h4");
+title.textContent = "🗂️ Previously Skipped Images:";
+title.style.margin = "0";
+
+// Count (right)
+const countSpan = document.createElement("span");
+countSpan.id = "skippedCountSpan";
+countSpan.style.fontWeight = "normal";
+countSpan.style.color = "#d35400";
+countSpan.style.fontSize = "16px";
+countSpan.style.marginRight = "1145px";
+countSpan.textContent = `Count: ${skippedData.length}`;
+
+// Assemble title row
+titleWrapper.appendChild(title);
+titleWrapper.appendChild(countSpan);
+skippedBox.appendChild(titleWrapper);
+
+// Image name list
+const list = document.createElement("ul");
+list.style.margin = "0";
+list.style.paddingLeft = "0";
+list.style.listStyleType = "none";
+
+skippedData.forEach((item) => {
+  skippedImageNames.add(item.name);
+  const li = document.createElement("li");
+  li.textContent = `📷 ${item.name}`;
+  li.style.marginBottom = "4px";
+  list.appendChild(li);
 });
 
+skippedBox.appendChild(list);
+gallery.parentNode.insertBefore(skippedBox, gallery);
 
+button.textContent = "🙈 Hide Skipped Images";
 
+        });
 
-      
+      function updateImageCounts() {
+        const uploadedCount = croppedImages.length;
+        const skippedCount = [...skippedImageNames].length;
+
+        const countDiv = document.getElementById("imageCounts");
+        countDiv.innerHTML = `📤 Uploaded: <span style="color:green;">${uploadedCount}</span> | ❌ Skipped: <span style="color:red;">${skippedCount}</span>`;
+
+        const skippedSpan = document.getElementById("skippedCountSpan");
+        if (skippedSpan) {
+          skippedSpan.textContent = `(${skippedCount})`;
+        }
+      }
     </script>
 
     <style>
@@ -557,7 +659,7 @@ checkbox.addEventListener("change", function () {
         width: 100%;
         max-width: 650px;
       }
-            .card1 {
+      .card1 {
         background: #fff;
         border: 1px solid #ccc;
         border-radius: 8px;
